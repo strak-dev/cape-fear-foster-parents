@@ -1,0 +1,22 @@
+[
+  {
+    "title": "Home",
+    "route": "/",
+    "path": "home"
+  },
+  {
+    "title": "Resources",
+    "route": "/resources",
+    "path": "resources"
+  },
+  {
+    "title": "Home",
+    "route": "/stuff/home",
+    "path": "stuff/home"
+  },
+  {
+    "title": "Things",
+    "route": "/stuff/things",
+    "path": "stuff/things"
+  }
+]

@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "start": "servor --reload"
+    "build": "node generate-index.js",
+    "start": "node generate-index.js && servor --reload"
   },
   "dependencies": {
     "servor": "^4.0.2"
