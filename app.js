@@ -7,6 +7,64 @@ async function getSiteDirectory() {
   return await response.json();
 }
 
+/**
+ * Transforms a flat array of pages [{route: "/stuff/things", title: "..."}, ...]
+ * into a nested directory tree HTML string with nested <ul> elements.
+ */
+function buildDirectoryTreeHtml(pages, isRoot = true) {
+  // 1. Build a nested object tree structure from routes
+  const tree = {};
+
+  pages.forEach((page) => {
+    // Trim leading/trailing slashes and split path into segments
+    const segments = page.route.replace(/^\/+|\/+$/g, '').split('/');
+    let current = tree;
+
+    segments.forEach((segment, index) => {
+      if (!current[segment]) {
+        current[segment] = { _children: {} };
+      }
+      
+      // If we are at the last segment, attach the page object
+      if (index === segments.length - 1) {
+        current[segment]._page = page;
+      }
+      
+      current = current[segment]._children;
+    });
+  });
+
+  // 2. Recursively generate HTML list nodes
+  function renderNode(node) {
+    let html = '<ul>';
+    
+    for (const key in node) {
+      const item = node[key];
+      const page = item._page;
+      const hasChildren = Object.keys(item._children).length > 0;
+
+      html += '<li>';
+      if (page) {
+        html += `<a href="${page.route}" data-link><strong>${page.title}</strong></a> <code>(${page.route})</code>`;
+      } else {
+        // Display folder category header if there is no index page for this folder
+        html += `<strong>${key}/</strong>`;
+      }
+
+      if (hasChildren) {
+        html += renderNode(item._children);
+      }
+      
+      html += '</li>';
+    }
+    
+    html += '</ul>';
+    return html;
+  }
+
+  return renderNode(tree);
+}
+
 async function loadPage() {
   const app = document.getElementById('app');
   let path = window.location.pathname;
@@ -24,12 +82,8 @@ async function loadPage() {
   if (path === '/directory' || path === '/sitemap') {
     try {
       const pages = await getSiteDirectory();
-      let html = '<h2>Site Directory</h2><ul>';
-      pages.forEach((p) => {
-        html += `<li><a href="${p.route}" data-link><strong>${p.title}</strong></a> <code>(${p.route})</code></li>`;
-      });
-      html += '</ul>';
-      app.innerHTML = html;
+      const treeHtml = buildDirectoryTreeHtml(pages);
+      app.innerHTML = `<h2>Site Directory</h2>${treeHtml}`;
     } catch (err) {
       console.error(err);
       app.innerHTML = '<h2>Directory</h2><p>Unable to load site index.</p>';
@@ -64,13 +118,8 @@ async function loadPage() {
     if (markdownText.includes('<!-- SITE_DIRECTORY -->')) {
       try {
         const pages = await getSiteDirectory();
-        let listHtml = '<ul>';
-        pages.forEach((p) => {
-          listHtml += `<li><a href="${p.route}" data-link>${p.title}</a></li>`;
-        });
-        listHtml += '</ul>';
-
-        app.innerHTML = app.innerHTML.replace('<!-- SITE_DIRECTORY -->', listHtml);
+        const treeHtml = buildDirectoryTreeHtml(pages);
+        app.innerHTML = app.innerHTML.replace('<!-- SITE_DIRECTORY -->', treeHtml);
       } catch (e) {
         console.error(e);
         app.innerHTML = app.innerHTML.replace('<!-- SITE_DIRECTORY -->', '');
